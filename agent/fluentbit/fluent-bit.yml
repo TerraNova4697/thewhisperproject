@@ -1,0 +1,45 @@
+service:
+  flush: 1
+  log_level: info
+  storage.path: /var/log/flb-storage
+  parsers_file: /etc/fluent-bit/parsers.conf
+
+pipeline:
+  inputs:
+    - name: tail
+      path: /usr/src/app/*.log
+      tag: myservice_tag
+      parser: json
+
+    - name: tail
+      path: /var/log/sys.log
+      tag: sys_logs_tag   # ← Присваиваем тег "sys_logs"
+      parser: json
+
+  filters:
+    - name: modify
+      match: "*"
+      add:
+        - agent dev_agent
+
+    - name: modify
+      match: "myservice_tag"
+      add:
+        - service myservice_logs
+
+    - name: modify
+      match: "sys_logs_tag"
+      add:
+        - service sys_logs
+
+  outputs:
+    - name: kafka
+      format: json_lines
+      brokers: 
+        - kafka:9092
+      topics:
+        - logs_topic
+      workers: 1
+      match: "*"
+      raw_log_key: "testagent"
+      message_key_field: "msgkeyfield"

@@ -1,0 +1,4 @@
+POSTGRES_USER=theuser
+POSTGRES_PASSWORD=thepassword
+POSTGRES_HOST_AUTH_METHOD=themethod
+POSTGRES_DB=thedatabase

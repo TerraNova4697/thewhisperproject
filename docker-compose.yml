@@ -1,0 +1,50 @@
+services:
+
+  kafka:
+    image: apache/kafka:4.0.0
+    container_name: whisper_kafka
+    ports: 
+      - 9092:9092
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      ./kafka/.env
+
+  db:
+    image: postgres:17.4-alpine
+    container_name: whisper_db
+    env_file:
+      ./postgres/.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/whisper-data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thewhisperprojectuser -d thewhisperprojectdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    ports:
+      - 5432:5432
+
+  agent:
+    image: agent:0.0.1
+    container_name: whisper_agent
+    volumes:
+      - ./agent/app:/usr/src/app
+      - ./agent/fluentbit/fluent-bit.yml:/etc/fluent-bit/fluent-bit.yml
+    depends_on: 
+      - kafka
+    command: >
+      sh -c "python main.py & exec /opt/fluent-bit/bin/fluent-bit -c /etc/fluent-bit/fluent-bit.yml"
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep fluent-bit && pgrep python"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+
+volumes:
+  postgres-data:
